@@ -8,6 +8,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mysql.jdbc.Driver;
+
 import kr.or.connet.jdbcexam2.dto.Role;
 
 public class RoleDao {
@@ -15,19 +17,20 @@ public class RoleDao {
 	private static String dbuser = "connectuser";
 	private static String dbpassword = "connect123!@#";
 
+	
 	public Role getRole(Integer roleId) {
 		Role role = null;
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 
+		DBConnect dbconnect = new DBConnect();
 		try {
-			Class.forName("com.mysql.jdbc.Driver");
-			conn = DriverManager.getConnection(dburl, dbuser, dbpassword);
+			conn = dbconnect.getConn();
 			String sql = "select description, role_id from role where role_id = ?";
-			ps = conn.prepareStatement(sql);
+			ps = dbconnect.getPs(conn, sql);
 			ps.setInt(1, roleId); // 첫번째인자는 물음표 순서, 두번째는 물음표대신 들어갈 쿼리.
-			rs = ps.executeQuery();
+			rs = dbconnect.getRs(ps);
 
 			if (rs.next()) {
 				String description = rs.getString(1); // 인자값 : 위에 ps = conn.prepareStatement(sql); 실행했을 때 순서대로..
@@ -40,27 +43,8 @@ public class RoleDao {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			if (rs != null) {
-				try {
-					rs.close();
-				} catch (SQLException e2) {
-					e2.printStackTrace();
-				}
-			}
-			if (ps != null) {
-				try {
-					ps.close();
-				} catch (SQLException e2) {
-					e2.printStackTrace();
-				}
-			}
-			if (conn != null) {
-				try {
-					conn.close();
-				} catch (SQLException e2) {
-					e2.printStackTrace();
-				}
-			}
+			DBClose dbClose = new DBClose();
+			dbClose.close(conn, ps, rs);
 		}
 
 		return role;
@@ -68,6 +52,9 @@ public class RoleDao {
 
 	//Insert
 	public int addRole(Role role) {
+		Connection conn = null;
+		PreparedStatement ps = null;
+		
 		int insertCount = 0;
 
 		try {
@@ -75,48 +62,53 @@ public class RoleDao {
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
+		
+		
 		String sql = "INSERT INTO role (role_id, description) VALUES ( ?, ? )";
 
-		try (Connection conn = DriverManager.getConnection(dburl, dbuser, dbpassword);
-				PreparedStatement ps = conn.prepareStatement(sql)) {
+		try  {
+			conn = DriverManager.getConnection(dburl, dbuser, dbpassword);
+			ps = conn.prepareStatement(sql);
 
 			ps.setInt(1, role.getRoleId());
 			ps.setString(2, role.getDescription());
 
 			insertCount = ps.executeUpdate();
-
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			DBClose dbClose = new DBClose();
+			dbClose.close(conn, ps);
 		}
 		return insertCount;
 	}
 
 	public List<Role> getRoles() {
+		Connection conn = null;
+		PreparedStatement ps = null;
+		
 		List<Role> list = new ArrayList<>();
 
-		try {
-			Class.forName("com.mysql.jdbc.Driver");
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-
 		String sql = "SELECT description, role_id FROM role order by role_id desc";
-		try (Connection conn = DriverManager.getConnection(dburl, dbuser, dbpassword);
-				PreparedStatement ps = conn.prepareStatement(sql)) {
 
-			try (ResultSet rs = ps.executeQuery()) {
+		try  {
+			Class.forName("com.mysql.jdbc.Driver");
+			conn = DriverManager.getConnection(dburl, dbuser, dbpassword);
+			ps = conn.prepareStatement(sql);
+			ResultSet rs = ps.executeQuery();
 
-				while (rs.next()) {
+			while (rs.next()) {
 					String description = rs.getString(1);
 					int id = rs.getInt("role_id");
 					Role role = new Role(id, description);
 					list.add(role); // list에 반복할때마다 Role인스턴스를 생성하여 list에 추가한다.
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
+
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			DBClose dbClose = new DBClose();
+			dbClose.close(conn, ps);
 		}
 		return list;
 	}
@@ -144,20 +136,9 @@ public class RoleDao {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		} finally {
-			if (ps != null) {
-				try {
-					ps.close();
-				} catch (Exception ex) {
-				}
-			} // if
-
-			if (conn != null) {
-				try {
-					conn.close();
-				} catch (Exception ex) {
-				}
-			} // if
-		} // finally
+			DBClose dbClose = new DBClose();
+			dbClose.close(conn, ps);
+		}
 
 		return deleteCount;
 	}
@@ -186,20 +167,9 @@ public class RoleDao {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		} finally {
-			if (ps != null) {
-				try {
-					ps.close();
-				} catch (Exception ex) {
-				}
-			} // if
-
-			if (conn != null) {
-				try {
-					conn.close();
-				} catch (Exception ex) {
-				}
-			} // if
-		} // finally
+			DBClose dbClose = new DBClose();
+			dbClose.close(conn, ps);
+		} 
 
 		return updateCount;
 	}
